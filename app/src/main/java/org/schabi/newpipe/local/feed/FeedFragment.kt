@@ -74,6 +74,7 @@ import org.schabi.newpipe.ktx.animate
 import org.schabi.newpipe.ktx.animateHideRecyclerViewAllowingScrolling
 import org.schabi.newpipe.ktx.slideUp
 import org.schabi.newpipe.local.feed.item.StreamItem
+import org.schabi.newpipe.player.playqueue.SinglePlayQueue
 import org.schabi.newpipe.local.feed.service.FeedLoadService
 import org.schabi.newpipe.local.subscription.SubscriptionManager
 import org.schabi.newpipe.util.DeviceUtils
@@ -249,11 +250,47 @@ class FeedFragment : BaseStateFragment<FeedState>() {
                 .setPositiveButton(resources.getString(R.string.ok), null)
                 .show()
             return true
+        } else if (item.itemId == R.id.menu_item_feed_play_unwatched) {
+            playUnwatchedSubscriptions()
+            return true
         } else if (item.itemId == R.id.menu_item_feed_toggle_played_items) {
             showStreamVisibilityDialog()
         }
 
         return super.onOptionsItemSelected(item)
+    }
+
+    /** Play the cached, unfinished subscription feed as one continuous queue. */
+    private fun playUnwatchedSubscriptions() {
+        disposables.add(
+            FeedDatabaseManager(requireContext())
+                .getStreams(groupId, false, true, false)
+                .subscribeOn(Schedulers.io())
+                .map { entries ->
+                    entries.map { it.stream.toStreamInfoItem() }
+                        .distinctBy { "${it.serviceId}:${it.url}" }
+                }
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({ streams ->
+                    if (streams.isEmpty()) {
+                        AlertDialog.Builder(requireContext())
+                            .setMessage("No unwatched subscription videos are cached. Refresh your feed first.")
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show()
+                    } else {
+                        NavigationHelper.playOnMainPlayer(
+                            requireActivity() as androidx.appcompat.app.AppCompatActivity,
+                            SinglePlayQueue(streams, 0)
+                        )
+                    }
+                }, { error ->
+                    Log.e(TAG, "Unable to build subscription-only queue", error)
+                    AlertDialog.Builder(requireContext())
+                        .setMessage("Unable to load subscription videos. Refresh your feed and retry.")
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show()
+                })
+        )
     }
 
     private fun showStreamVisibilityDialog() {
