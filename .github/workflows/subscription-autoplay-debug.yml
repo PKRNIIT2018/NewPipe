@@ -24,7 +24,17 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
       - name: Run unit tests and build debug APK
-        run: ./gradlew testDebugUnitTest assembleContinuous --stacktrace -DskipFormatKtlint
+        run: ./gradlew assembleContinuous lintContinuous testDebugUnitTest --stacktrace --console=plain -DskipFormatKtlint
+      - name: Upload build diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: subscription-autoplay-build-diagnostics
+          path: |
+            app/build/reports/**
+            app/build/test-results/**
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v7
