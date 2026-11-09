@@ -217,10 +217,11 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
         }
         AlertDialog.Builder(requireContext())
             .setTitle(groupName)
-            .setItems(arrayOf("Manage channels", "Latest videos")) { _, selected ->
+            .setItems(arrayOf("Manage channels", "Latest videos", "Create new folder")) { _, selected ->
                 when (selected) {
                     0 -> FeedGroupDialog.newInstance(groupId).show(fm, null)
                     1 -> NavigationHelper.openFeedFragment(fm, groupId, groupName)
+                    2 -> FeedGroupDialog.newInstance().show(fm, null)
                 }
             }
             .show()
