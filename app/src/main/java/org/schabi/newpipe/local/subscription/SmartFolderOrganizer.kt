@@ -1,7 +1,6 @@
 package org.schabi.newpipe.local.subscription
 
 import android.content.Context
-import androidx.room3.withWriteTransaction
 import org.schabi.newpipe.NewPipeDatabase
 import org.schabi.newpipe.database.feed.model.FeedGroupEntity
 import org.schabi.newpipe.database.feed.model.FeedGroupSubscriptionEntity
@@ -13,7 +12,7 @@ import org.schabi.newpipe.database.feed.model.FeedGroupSubscriptionEntity
 class SmartFolderOrganizer(context: Context) {
     private val database = NewPipeDatabase.getInstance(context)
 
-    suspend fun organize(): Int = database.withWriteTransaction {
+    fun organize(): Int {
         val groupsDao = database.feedGroupDAO()
         val subscriptions = database.subscriptionDAO().getAll().firstOrError().blockingGet()
         val existingGroups = groupsDao.getAll().firstOrError().blockingGet()
