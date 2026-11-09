@@ -251,7 +251,7 @@ class FeedFragment : BaseStateFragment<FeedState>() {
                 .show()
             return true
         } else if (item.itemId == R.id.menu_item_feed_play_unwatched) {
-            playUnwatchedSubscriptions()
+            showSmartPlaybackDialog()
             return true
         } else if (item.itemId == R.id.menu_item_feed_toggle_played_items) {
             showStreamVisibilityDialog()
@@ -260,14 +260,90 @@ class FeedFragment : BaseStateFragment<FeedState>() {
         return super.onOptionsItemSelected(item)
     }
 
+    /**
+     * Smart playback options are intentionally local and opt-in.
+     * The selected group is resolved from the existing subscription group database.
+     */
+    private fun showSmartPlaybackDialog() {
+        val preferences = PreferenceManager.getDefaultSharedPreferences(requireContext())
+        val manager = FeedDatabaseManager(requireContext())
+        disposables.add(
+            manager.groups()
+                .first(emptyList())
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe({ groups ->
+                    val allGroups = groups.sortedBy { it.sortOrder }
+                    val ids = listOf(FeedGroupEntity.GROUP_ALL_ID) + allGroups.map { it.uid }
+                    val labels = listOf("All subscriptions") + allGroups.map { it.name }
+                    val preferredGroup = allGroups.firstOrNull {
+                        it.name.equals("Technology & AI", ignoreCase = true)
+                    }?.uid ?: groupId
+                    val storedId = preferences.getLong("smart_player_group_id", preferredGroup)
+                    val selectedIndex = ids.indexOf(storedId).coerceAtLeast(0)
+                    val options = arrayOf(
+                        "Include Shorts (videos up to 60 seconds)",
+                        "Include livestreams"
+                    )
+                    val selected = booleanArrayOf(
+                        preferences.getBoolean("smart_player_include_shorts", false),
+                        preferences.getBoolean("smart_player_include_live", false)
+                    )
+                    AlertDialog.Builder(requireContext())
+                        .setTitle("Smart subscription playback")
+                        .setSingleChoiceItems(labels.toTypedArray(), selectedIndex) { dialog, which ->
+                            preferences.edit { putLong("smart_player_group_id", ids[which]) }
+                            dialog.dismiss()
+                            showSmartPlaybackDialog()
+                        }
+                        .setMultiChoiceItems(options, selected) { _, which, checked ->
+                            selected[which] = checked
+                            preferences.edit {
+                                putBoolean(
+                                    if (which == 0) {
+                                        "smart_player_include_shorts"
+                                    } else {
+                                        "smart_player_include_live"
+                                    },
+                                    checked
+                                )
+                            }
+                        }
+                        .setPositiveButton("Play unwatched") { _, _ ->
+                            val selectedId = preferences.getLong(
+                                "smart_player_group_id",
+                                ids[selectedIndex]
+                            )
+                            playUnwatchedSubscriptions(selectedId)
+                        }
+                        .setNegativeButton(android.R.string.cancel, null)
+                        .show()
+                }, { error ->
+                    ErrorUtil.showUiErrorSnackbar(this, "Unable to load subscription groups", error)
+                })
+        )
+    }
+
     /** Play the cached, unfinished subscription feed as one continuous queue. */
-    private fun playUnwatchedSubscriptions() {
+    private fun playUnwatchedSubscriptions(selectedGroupId: Long) {
         disposables.add(
             FeedDatabaseManager(requireContext())
-                .getStreams(groupId, false, true, false)
+                .getStreams(selectedGroupId, false, true, false)
                 .subscribeOn(Schedulers.io())
                 .map { entries ->
-                    entries.map { it.stream.toStreamInfoItem() }
+                    val preferences = PreferenceManager.getDefaultSharedPreferences(requireContext())
+                    val includeShorts = preferences.getBoolean("smart_player_include_shorts", false)
+                    val includeLive = preferences.getBoolean("smart_player_include_live", false)
+                    entries.map { it.stream }
+                        .filter { stream ->
+                            (includeShorts || stream.duration > 60L) &&
+                                (includeLive || stream.streamType.name !in listOf(
+                                    "LIVE_STREAM",
+                                    "AUDIO_LIVE_STREAM",
+                                    "POST_LIVE_STREAM"
+                                ))
+                        }
+                        .map { it.toStreamInfoItem() }
                         .distinctBy { "${it.serviceId}:${it.url}" }
                 }
                 .observeOn(AndroidSchedulers.mainThread())
