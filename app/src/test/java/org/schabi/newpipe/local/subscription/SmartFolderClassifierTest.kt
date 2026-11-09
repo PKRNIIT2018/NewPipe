@@ -28,12 +28,26 @@ class SmartFolderClassifierTest {
     @Test
     fun `multiple categories are supported`() {
         val categories = SmartFolderClassifier.categories("Malayalam Movie Review", "News")
-        assertTrue("Malayalam Entertainment" in categories)
-        assertTrue("News & Current Affairs" in categories)
+        assertEquals(setOf("News & Current Affairs"), categories)
     }
 
     @Test
-    fun `classification ignores letter case`() {
+    fun `description takes precedence over channel name`() {
+        val categories = SmartFolderClassifier.categories(
+            "Music Podcast",
+            "Science tutorials and university education"
+        )
+        assertEquals(setOf("Education"), categories)
+    }
+
+    @Test
+    fun `ambiguous descriptions remain unclassified`() {
+        val categories = SmartFolderClassifier.categories("Movie Channel", "Music and science")
+        assertEquals(emptySet<String>(), categories)
+    }
+
+    @Test
+    fun `classification ignores letter case`()  {
         assertTrue("Kids & Family" in SmartFolderClassifier.categories("KIDS CARTOON", null))
     }
 }
