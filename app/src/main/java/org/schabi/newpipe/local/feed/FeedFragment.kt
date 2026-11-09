@@ -75,6 +75,7 @@ import org.schabi.newpipe.ktx.animateHideRecyclerViewAllowingScrolling
 import org.schabi.newpipe.ktx.slideUp
 import org.schabi.newpipe.local.feed.item.StreamItem
 import org.schabi.newpipe.local.feed.service.FeedLoadService
+import org.schabi.newpipe.local.subscription.SmartFolderOrganizer
 import org.schabi.newpipe.local.subscription.SubscriptionManager
 import org.schabi.newpipe.player.playqueue.SinglePlayQueue
 import org.schabi.newpipe.util.DeviceUtils
@@ -248,6 +249,38 @@ class FeedFragment : BaseStateFragment<FeedState>() {
                     }
                 }
                 .setPositiveButton(resources.getString(R.string.ok), null)
+                .show()
+            return true
+        } else if (item.itemId == R.id.menu_item_feed_auto_folders) {
+            AlertDialog.Builder(requireContext())
+                .setTitle("Auto-organize subscriptions")
+                .setMessage(
+                    "Create category folders from channel names and descriptions. " +
+                        "Existing subscriptions and folder assignments will be preserved."
+                )
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton("Organize") { _, _ ->
+                    disposables.add(
+                        Single.fromCallable {
+                            SmartFolderOrganizer(requireContext().applicationContext).organize()
+                        }
+                            .subscribeOn(Schedulers.io())
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .subscribe({ count ->
+                                AlertDialog.Builder(requireContext())
+                                    .setMessage("$count new folder memberships added. " +
+                                        "Refresh the subscription feed to see folders.")
+                                    .setPositiveButton(android.R.string.ok, null)
+                                    .show()
+                            }, { error ->
+                                ErrorUtil.showUiErrorSnackbar(
+                                    this,
+                                    "Could not organize subscriptions",
+                                    error
+                                )
+                            })
+                    )
+                }
                 .show()
             return true
         } else if (item.itemId == R.id.menu_item_feed_play_unwatched) {
