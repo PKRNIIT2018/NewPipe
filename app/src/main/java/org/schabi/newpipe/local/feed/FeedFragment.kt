@@ -268,8 +268,10 @@ class FeedFragment : BaseStateFragment<FeedState>() {
                             .observeOn(AndroidSchedulers.mainThread())
                             .subscribe({ count ->
                                 AlertDialog.Builder(requireContext())
-                                    .setMessage("$count new folder memberships added. " +
-                                        "Refresh the subscription feed to see folders.")
+                                    .setMessage(
+                                        "$count new folder memberships added. " +
+                                            "Refresh the subscription feed to see folders."
+                                    )
                                     .setPositiveButton(android.R.string.ok, null)
                                     .show()
                             }, { error ->
@@ -371,10 +373,10 @@ class FeedFragment : BaseStateFragment<FeedState>() {
                         .filter { stream ->
                             (includeShorts || stream.duration > 60L) &&
                                 (includeLive || stream.streamType.name !in listOf(
-                                    "LIVE_STREAM",
-                                    "AUDIO_LIVE_STREAM",
-                                    "POST_LIVE_STREAM"
-                                ))
+                                        "LIVE_STREAM",
+                                        "AUDIO_LIVE_STREAM",
+                                        "POST_LIVE_STREAM"
+                                    ))
                         }
                         .map { it.toStreamInfoItem() }
                         .distinctBy { "${it.serviceId}:${it.url}" }
