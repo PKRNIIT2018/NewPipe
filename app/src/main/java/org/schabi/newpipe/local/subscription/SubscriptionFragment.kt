@@ -210,6 +210,22 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
         setupInitialLayout()
     }
 
+    private fun openFolder(groupId: Long, groupName: String) {
+        if (groupId == GROUP_ALL_ID) {
+            NavigationHelper.openFeedFragment(fm, groupId, groupName)
+            return
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle(groupName)
+            .setItems(arrayOf("Manage channels", "Latest videos")) { _, selected ->
+                when (selected) {
+                    0 -> FeedGroupDialog.newInstance(groupId).show(fm, null)
+                    1 -> NavigationHelper.openFeedFragment(fm, groupId, groupName)
+                }
+            }
+            .show()
+    }
+
     private fun setupInitialLayout() {
         Section().apply {
             carouselAdapter = GroupAdapter<GroupieViewHolder<FeedItemCarouselBinding>>()
@@ -217,7 +233,7 @@ class SubscriptionFragment : BaseStateFragment<SubscriptionState>() {
             carouselAdapter.setOnItemClickListener { item, _ ->
                 when (item) {
                     is FeedGroupCardItem ->
-                        NavigationHelper.openFeedFragment(fm, item.groupId, item.name)
+                        openFolder(item.groupId, item.name)
 
                     is FeedGroupCardGridItem ->
                         NavigationHelper.openFeedFragment(fm, item.groupId, item.name)
