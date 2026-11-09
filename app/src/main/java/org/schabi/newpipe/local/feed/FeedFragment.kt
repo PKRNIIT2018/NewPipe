@@ -369,14 +369,12 @@ class FeedFragment : BaseStateFragment<FeedState>() {
                     val preferences = PreferenceManager.getDefaultSharedPreferences(requireContext())
                     val includeShorts = preferences.getBoolean("smart_player_include_shorts", false)
                     val includeLive = preferences.getBoolean("smart_player_include_live", false)
+                    val liveTypes = setOf("LIVE_STREAM", "AUDIO_LIVE_STREAM", "POST_LIVE_STREAM")
                     entries.map { it.stream }
                         .filter { stream ->
-                            (includeShorts || stream.duration > 60L) &&
-                                (includeLive || stream.streamType.name !in listOf(
-                                        "LIVE_STREAM",
-                                        "AUDIO_LIVE_STREAM",
-                                        "POST_LIVE_STREAM"
-                                    ))
+                            val isShortAllowed = includeShorts || stream.duration > 60L
+                            val isLiveAllowed = includeLive || stream.streamType.name !in liveTypes
+                            isShortAllowed && isLiveAllowed
                         }
                         .map { it.toStreamInfoItem() }
                         .distinctBy { "${it.serviceId}:${it.url}" }
