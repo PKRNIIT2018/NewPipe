@@ -47,7 +47,7 @@ class SmartFolderClassifierTest {
     }
 
     @Test
-    fun `classification ignores letter case`()  {
+    fun `classification ignores letter case`() {
         assertTrue("Kids & Family" in SmartFolderClassifier.categories("KIDS CARTOON", null))
     }
 }
