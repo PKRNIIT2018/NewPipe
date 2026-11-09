@@ -15,10 +15,24 @@ object SmartFolderClassifier {
     )
 
     fun categories(name: String?, description: String?): Set<String> {
-        val nameText = name.orEmpty().lowercase()
         val descriptionText = description.orEmpty().lowercase()
+        val nameText = name.orEmpty().lowercase()
+        val descriptionScores = rules.mapValues { (_, terms) ->
+            terms.count { term -> descriptionText.contains(term) }
+        }
+        val bestScore = descriptionScores.values.maxOrNull() ?: 0
+        if (bestScore >= 2) {
+            return descriptionScores.filterValues { it == bestScore }.keys
+        }
+        if (bestScore == 1) {
+            val matching = descriptionScores.filterValues { it == 1 }.keys
+            if (matching.size == 1) {
+                return matching
+            }
+            return emptySet()
+        }
         return rules.filterValues { terms ->
-            terms.any { term -> nameText.contains(term) || descriptionText.contains(term) }
+            terms.any { term -> nameText.contains(term) }
         }.keys
     }
 
