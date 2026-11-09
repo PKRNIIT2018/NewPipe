@@ -41,6 +41,6 @@ class SmartFolderOrganizer(context: Context) {
                 added += newIds.size
             }
         }
-        added
+        return added
     }
 }
